@@ -69,7 +69,7 @@ model User {
   resetPassword ResetPassword? @relation
   auditLogs     AuditLog[]
   apiKeys       ApiKey[]
-  roles         Role[]
+  userRoles     UserRole[]
 
   @@index([firstName, lastName])
   @@index([provider])
@@ -84,7 +84,7 @@ model Role {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  users           User[]
+  userRoles       UserRole[]
   rolePermissions RolePermission[]
 
   @@map("roles")
@@ -114,6 +114,17 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
+}
+
+model UserRole {
+  userId Int @map("user_id")
+  roleId Int @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
 }
 
 model ResetPassword {
