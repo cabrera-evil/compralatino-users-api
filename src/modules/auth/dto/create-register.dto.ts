@@ -3,20 +3,42 @@ import {
 	IsNotEmpty,
 	IsString,
 	IsStrongPassword,
+	Matches,
+	MaxLength,
+	ValidateIf,
 } from 'class-validator';
 
+const LEGACY_FIELDS_MESSAGE =
+	'Provide either name, or firstName, lastName and username';
+
+const NAME_MAX_LENGTH = 100;
+const USERNAME_MAX_LENGTH = 50;
+
 export class CreateRegisterDto {
+	@ValidateIf((o: CreateRegisterDto) => o.name !== undefined)
 	@IsString()
-	@IsNotEmpty()
-	username: string;
+	@IsNotEmpty({ message: LEGACY_FIELDS_MESSAGE })
+	@Matches(/\S/, { message: LEGACY_FIELDS_MESSAGE })
+	@MaxLength(NAME_MAX_LENGTH)
+	name?: string;
 
-	@IsString()
-	@IsNotEmpty()
-	firstName: string;
+	@ValidateIf(
+		(o: CreateRegisterDto) => o.name === undefined || o.username !== undefined
+	)
+	@IsString({ message: LEGACY_FIELDS_MESSAGE })
+	@IsNotEmpty({ message: LEGACY_FIELDS_MESSAGE })
+	@MaxLength(USERNAME_MAX_LENGTH)
+	username?: string;
 
-	@IsString()
-	@IsNotEmpty()
-	lastName: string;
+	@ValidateIf((o: CreateRegisterDto) => o.name === undefined)
+	@IsString({ message: LEGACY_FIELDS_MESSAGE })
+	@IsNotEmpty({ message: LEGACY_FIELDS_MESSAGE })
+	firstName?: string;
+
+	@ValidateIf((o: CreateRegisterDto) => o.name === undefined)
+	@IsString({ message: LEGACY_FIELDS_MESSAGE })
+	@IsNotEmpty({ message: LEGACY_FIELDS_MESSAGE })
+	lastName?: string;
 
 	@IsString()
 	@IsEmail()
@@ -34,15 +56,18 @@ export class CreateRegisterDto {
 	password: string;
 
 	constructor(
-		username: string,
-		firstName: string,
-		lastName: string,
 		email: string,
-		password: string
+		password: string,
+		username?: string,
+		firstName?: string,
+		lastName?: string,
+		name?: string
 	) {
-		this.firstName = firstName;
-		this.lastName = lastName;
 		this.email = email;
 		this.password = password;
+		this.username = username;
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.name = name;
 	}
 }

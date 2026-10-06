@@ -1,7 +1,13 @@
+import {
+	APP_ROLE_PRECEDENCE,
+	AppRole,
+	ROLE_NAME_TO_APP_ROLE,
+} from '@/constants/roles';
 import { hashPassword } from '@/utils/bcrypt.util';
 import { singleResponse } from '@/utils/response.util';
 import { MailerService } from '@nestjs-modules/mailer';
 import {
+	ConflictException,
 	Injectable,
 	NotFoundException,
 	UnauthorizedException,
@@ -10,6 +16,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcryptjs from 'bcryptjs';
 import { Response } from 'express';
 import { Prisma, PrismaClient, Provider } from 'prisma/generated/client';
+import {
+	pickAvailableUsername,
+	splitFullName,
+	usernameBaseFromEmail,
+} from '../../utils/register-identity.util';
 import { stripeSensitive } from '../../utils/stripe-sensitive.util';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateOauthDto } from './dto/create-outh.dto';
@@ -17,6 +28,19 @@ import { CreateRegisterDto } from './dto/create-register.dto';
 import { RequestTokenDto } from './dto/request-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
+import { AuthAccess } from './types/auth-access.type';
+
+const USERNAME_LOOKUP_LIMIT = 100;
+const USERNAME_MAX_ATTEMPTS = 5;
+
+const isUsernameConflict = (error: unknown): boolean => {
+	if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+	if (error.code !== 'P2002') return false;
+	const target = error.meta?.target;
+	return Array.isArray(target)
+		? target.includes('username')
+		: typeof target === 'string' && target.includes('username');
+};
 
 @Injectable()
 export class AuthService {
@@ -35,6 +59,38 @@ export class AuthService {
 		if (!user) return null;
 		const isValid = await bcryptjs.compare(password, user.password);
 		return isValid ? user : null;
+	}
+
+	async getAccess(userId: number): Promise<AuthAccess> {
+		const userRoles = await this.prisma.userRole.findMany({
+			where: { userId },
+			include: {
+				role: {
+					include: { rolePermissions: { include: { permission: true } } },
+				},
+			},
+		});
+		const roles = [...new Set(userRoles.map((ur) => ur.role.name))];
+		const permissions = [
+			...new Set(
+				userRoles.flatMap((ur) =>
+					ur.role.rolePermissions.map((rp) => rp.permission.code)
+				)
+			),
+		];
+		const mapped = roles.flatMap((name) => ROLE_NAME_TO_APP_ROLE[name] ?? []);
+		const role = mapped.reduce<AppRole>(
+			(top, current) =>
+				APP_ROLE_PRECEDENCE.indexOf(current) > APP_ROLE_PRECEDENCE.indexOf(top)
+					? current
+					: top,
+			AppRole.USER
+		);
+		return { role, roles, permissions };
+	}
+
+	private async serializeUser<T extends { id: number }>(user: T) {
+		return { ...stripeSensitive(user), ...(await this.getAccess(user.id)) };
 	}
 
 	signToken(id: number) {
@@ -104,7 +160,7 @@ export class AuthService {
 			res
 		);
 		return singleResponse({
-			user: stripeSensitive(user),
+			user: await this.serializeUser(user),
 			jwt: accessToken,
 			refreshToken,
 		});
@@ -122,7 +178,7 @@ export class AuthService {
 			const { accessToken, refreshToken: newRefreshToken } =
 				await this.setAuthCookies(user.id, res);
 			return singleResponse({
-				user: stripeSensitive(user),
+				user: await this.serializeUser(user),
 				jwt: accessToken,
 				refreshToken: newRefreshToken,
 			});
@@ -143,19 +199,91 @@ export class AuthService {
 	}
 
 	async register(createRegisterDto: CreateRegisterDto, res: Response) {
-		createRegisterDto.password = await hashPassword(createRegisterDto.password);
-		const user = await this.prisma.user.create({
-			data: createRegisterDto,
-		});
+		const { email, password } = createRegisterDto;
+		const hashedPassword = await hashPassword(password);
+		const user = await this.createUserWithRetry(
+			email,
+			hashedPassword,
+			createRegisterDto
+		);
 		const { accessToken, refreshToken } = await this.setAuthCookies(
 			user.id,
 			res
 		);
 		return singleResponse({
-			user: stripeSensitive(user),
+			user: await this.serializeUser(user),
 			jwt: accessToken,
 			refreshToken,
 		});
+	}
+
+	private async createUserWithRetry(
+		email: string,
+		password: string,
+		dto: CreateRegisterDto
+	) {
+		const retryable = dto.name !== undefined && dto.username === undefined;
+		for (let attempt = 1; ; attempt++) {
+			try {
+				return await this.prisma.user.create({
+					data: {
+						email,
+						password,
+						...(await this.resolveRegisterIdentity(dto)),
+					},
+				});
+			} catch (error) {
+				if (!retryable || !isUsernameConflict(error)) throw error;
+				if (attempt >= USERNAME_MAX_ATTEMPTS)
+					throw new ConflictException('USERNAME_UNAVAILABLE');
+			}
+		}
+	}
+
+	private async resolveRegisterIdentity({
+		name,
+		email,
+		username,
+		firstName,
+		lastName,
+	}: CreateRegisterDto): Promise<{
+		username: string;
+		firstName: string;
+		lastName: string;
+	}> {
+		if (name === undefined)
+			return {
+				username: username as string,
+				firstName: firstName as string,
+				lastName: lastName as string,
+			};
+		return {
+			...splitFullName(name),
+			username: username ?? (await this.generateUniqueUsername(email)),
+		};
+	}
+
+	private async generateUniqueUsername(email: string): Promise<string> {
+		const base = usernameBaseFromEmail(email);
+		const existing = await this.prisma.user.findMany({
+			where: { username: { startsWith: base } },
+			select: { username: true },
+			orderBy: { username: 'asc' },
+			take: USERNAME_LOOKUP_LIMIT,
+		});
+		const taken = new Set(existing.map((u) => u.username));
+		const truncated = existing.length === USERNAME_LOOKUP_LIMIT;
+		for (let attempt = 0; attempt < USERNAME_LOOKUP_LIMIT; attempt++) {
+			const candidate = pickAvailableUsername(base, taken);
+			if (!truncated) return candidate;
+			const clash = await this.prisma.user.findUnique({
+				where: { username: candidate },
+				select: { id: true },
+			});
+			if (!clash) return candidate;
+			taken.add(candidate);
+		}
+		throw new ConflictException('USERNAME_UNAVAILABLE');
 	}
 
 	async profile(id: number, query?: Omit<Prisma.UserFindUniqueArgs, 'where'>) {
@@ -164,7 +292,10 @@ export class AuthService {
 			...query,
 		});
 		if (!user) throw new NotFoundException('USER_NOT_FOUND');
-		return singleResponse(stripeSensitive(user));
+		return singleResponse({
+			...stripeSensitive(user),
+			...(await this.getAccess(id)),
+		});
 	}
 
 	async requestResetToken(requestTokenDto: RequestTokenDto) {
@@ -261,7 +392,7 @@ export class AuthService {
 			res
 		);
 		return singleResponse({
-			user: stripeSensitive(user),
+			user: await this.serializeUser(user),
 			jwt: accessToken,
 			refreshToken,
 		});
