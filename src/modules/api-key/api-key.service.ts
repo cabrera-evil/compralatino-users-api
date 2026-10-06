@@ -61,7 +61,9 @@ export class ApiKeyService {
 						id: true,
 						username: true,
 						email: true,
-						roles: { select: { id: true, name: true } },
+						userRoles: {
+							select: { role: { select: { id: true, name: true } } },
+						},
 					},
 				},
 			},
@@ -76,7 +78,12 @@ export class ApiKeyService {
 			status: apiKey.status,
 			expiresAt: apiKey.expiresAt,
 			createdAt: apiKey.createdAt,
-			user: apiKey.user,
+			user: {
+				id: apiKey.user.id,
+				username: apiKey.user.username,
+				email: apiKey.user.email,
+				roles: apiKey.user.userRoles.map(({ role }) => role),
+			},
 		});
 	}
 
@@ -130,7 +137,9 @@ export class ApiKeyService {
 						id: true,
 						username: true,
 						email: true,
-						roles: { select: { id: true, name: true } },
+						userRoles: {
+							select: { role: { select: { id: true, name: true } } },
+						},
 					},
 				},
 			},
@@ -139,8 +148,14 @@ export class ApiKeyService {
 		});
 
 		return singleResponse(
-			apiKeys.map((key) => ({
+			apiKeys.map((key: any) => ({
 				...key,
+				user: {
+					id: key.user.id,
+					username: key.user.username,
+					email: key.user.email,
+					roles: key.user.userRoles.map(({ role }: any) => role),
+				},
 				keyMasked: `${key.keyPrefix}${'*'.repeat(36)}`,
 			}))
 		);
@@ -197,7 +212,9 @@ export class ApiKeyService {
 						firstName: true,
 						lastName: true,
 						email: true,
-						roles: { select: { id: true, name: true } },
+						userRoles: {
+							select: { role: { select: { id: true, name: true } } },
+						},
 						provider: true,
 						emailVerified: true,
 						profileCompleted: true,
@@ -237,7 +254,8 @@ export class ApiKeyService {
 
 		if (!isValid) return null;
 
-		return apiKey.user;
+		const { userRoles, ...user } = apiKey.user;
+		return { ...user, roles: userRoles.map(({ role }) => role) };
 	}
 
 	/**

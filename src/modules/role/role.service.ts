@@ -84,9 +84,10 @@ export class RoleService {
 		const role = await this.prisma.role.findUnique({ where: { id: roleId } });
 		if (!role) throw new NotFoundException('Role not found');
 
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: { roles: { connect: { id: roleId } } },
+		await this.prisma.userRole.upsert({
+			where: { userId_roleId: { userId, roleId } },
+			create: { userId, roleId },
+			update: {},
 		});
 
 		return singleResponse({ userId, roleId });
@@ -96,10 +97,7 @@ export class RoleService {
 		const role = await this.prisma.role.findUnique({ where: { id: roleId } });
 		if (!role) throw new NotFoundException('Role not found');
 
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: { roles: { disconnect: { id: roleId } } },
-		});
+		await this.prisma.userRole.deleteMany({ where: { userId, roleId } });
 
 		return singleResponse({ userId, roleId });
 	}

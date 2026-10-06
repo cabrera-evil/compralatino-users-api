@@ -44,9 +44,12 @@ export const seedUsers = async (prisma: PrismaClient) => {
 		});
 
 		if (superAdminRole) {
-			await prisma.user.update({
-				where: { id: user.id },
-				data: { roles: { connect: { id: superAdminRole.id } } },
+			await prisma.userRole.upsert({
+				where: {
+					userId_roleId: { userId: user.id, roleId: superAdminRole.id },
+				},
+				create: { userId: user.id, roleId: superAdminRole.id },
+				update: {},
 			});
 		}
 

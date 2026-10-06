@@ -29,10 +29,14 @@ export class PermissionGuard implements CanActivate {
 		const user = await this.prisma.user.findUnique({
 			where: { id: request.user.id },
 			include: {
-				roles: {
+				userRoles: {
 					include: {
-						rolePermissions: {
-							include: { permission: true },
+						role: {
+							include: {
+								rolePermissions: {
+									include: { permission: true },
+								},
+							},
 						},
 					},
 				},
@@ -42,8 +46,8 @@ export class PermissionGuard implements CanActivate {
 		if (!user) return false;
 
 		const granted = new Set(
-			user.roles.flatMap((role) =>
-				role.rolePermissions.map((rp) => rp.permission.code)
+			user.userRoles.flatMap((userRole) =>
+				userRole.role.rolePermissions.map((rp) => rp.permission.code)
 			)
 		);
 
