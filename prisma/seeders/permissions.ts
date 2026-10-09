@@ -77,6 +77,13 @@ const permissionData: Array<{
 		resource: 'api-keys',
 		action: 'read-all',
 	},
+	// Monitoring
+	{
+		code: 'monitoring:read',
+		description: 'View admin monitoring',
+		resource: 'monitoring',
+		action: 'read',
+	},
 	// Files
 	{
 		code: 'files:create',

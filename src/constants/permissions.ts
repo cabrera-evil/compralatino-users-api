@@ -20,6 +20,9 @@ export const AppPermissions = {
 	// API key management (admin-level)
 	API_KEYS_READ_ALL: 'api-keys:read-all',
 
+	// Monitoring
+	MONITORING_READ: 'monitoring:read',
+
 	// File management
 	FILES_CREATE: 'files:create',
 	FILES_READ: 'files:read',
