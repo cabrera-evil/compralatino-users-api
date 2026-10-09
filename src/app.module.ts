@@ -24,6 +24,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { RoleModule } from './modules/role/role.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { UserModule } from './modules/user/user.module';
+import { UsersRpcModule } from './modules/users-rpc/users-rpc.module';
 
 @Module({
 	imports: [
@@ -40,6 +41,7 @@ import { UserModule } from './modules/user/user.module';
 		PrismaModule,
 		RoleModule,
 		UserModule,
+		UsersRpcModule,
 		SocketModule,
 		JwtModule.registerAsync(JwtConfig),
 	],
