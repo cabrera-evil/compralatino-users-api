@@ -2,6 +2,7 @@ import { JwtConfig } from '@/config/jwt.config';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { EventsModule } from '../events/events.module';
 import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -9,7 +10,12 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 @Module({
-	imports: [UserModule, PassportModule, JwtModule.registerAsync(JwtConfig)],
+	imports: [
+		UserModule,
+		EventsModule,
+		PassportModule,
+		JwtModule.registerAsync(JwtConfig),
+	],
 	providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
 	controllers: [AuthController],
 	exports: [AuthService],

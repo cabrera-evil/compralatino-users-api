@@ -22,6 +22,7 @@ import {
 	usernameBaseFromEmail,
 } from '../../utils/register-identity.util';
 import { stripeSensitive } from '../../utils/stripe-sensitive.util';
+import { UserEventsPublisher } from '../events/user-events.publisher';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateOauthDto } from './dto/create-outh.dto';
 import { CreateRegisterDto } from './dto/create-register.dto';
@@ -47,7 +48,8 @@ export class AuthService {
 	constructor(
 		private readonly prisma: PrismaClient,
 		private readonly jwtService: JwtService,
-		private readonly mailerService: MailerService
+		private readonly mailerService: MailerService,
+		private readonly userEvents: UserEventsPublisher
 	) {}
 
 	async validateUser(identifier: string, password: string) {
@@ -206,6 +208,7 @@ export class AuthService {
 			hashedPassword,
 			createRegisterDto
 		);
+		this.userEvents.publishUserRegistered(user.id);
 		const { accessToken, refreshToken } = await this.setAuthCookies(
 			user.id,
 			res
@@ -374,7 +377,7 @@ export class AuthService {
 				],
 			},
 		});
-		if (!user)
+		if (!user) {
 			user = await this.prisma.user.create({
 				data: {
 					email: createOatuhDto.email ?? null,
@@ -387,6 +390,8 @@ export class AuthService {
 					password: '',
 				},
 			});
+			this.userEvents.publishUserRegistered(user.id);
+		}
 		const { accessToken, refreshToken } = await this.setAuthCookies(
 			user.id,
 			res
