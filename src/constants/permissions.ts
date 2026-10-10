@@ -23,6 +23,10 @@ export const AppPermissions = {
 	// Monitoring
 	MONITORING_READ: 'monitoring:read',
 
+	// Order management (admin)
+	ORDERS_READ: 'orders:read',
+	ORDERS_WRITE: 'orders:write',
+
 	// File management
 	FILES_CREATE: 'files:create',
 	FILES_READ: 'files:read',
