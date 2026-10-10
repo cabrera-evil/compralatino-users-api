@@ -1,3 +1,26 @@
+## 1.0.0-beta.1 (2026-10-10)
+
+### Features
+
+* **auth:** return role and permissions on auth responses and accept name on register ([8a82f5c](https://github.com/cabrera-evil/compralatino-users-api/commit/8a82f5cae8d9d4881dbf30b778da350200295aa0))
+* **events:** publish user.registered after new user registration ([714d6e4](https://github.com/cabrera-evil/compralatino-users-api/commit/714d6e4428bcbfbb8a833722a2dcf9ee8443deec))
+* **health:** report database and rabbitmq status ([d55daf4](https://github.com/cabrera-evil/compralatino-users-api/commit/d55daf460e90dde5912fe502d4e155080a546ce5))
+* **permissions:** add orders:read and orders:write for admin ([1a21825](https://github.com/cabrera-evil/compralatino-users-api/commit/1a21825a6dde98586fdd318098a6b4a8aacc2bb6))
+* **permissions:** seed the monitoring:read permission for admin roles ([e251eac](https://github.com/cabrera-evil/compralatino-users-api/commit/e251eace2b1e3cf5daa8c4c1a3b2b64129c5a5de))
+* prisma schema and initial migration for users_svc ([fc628fc](https://github.com/cabrera-evil/compralatino-users-api/commit/fc628fc1bb3d2e2d06ebbc0cd5c659df93e7b64c))
+* **rabbitmq:** connect the rabbitmq microservice transport ([3cfe375](https://github.com/cabrera-evil/compralatino-users-api/commit/3cfe3752e18bdac96d5623277b4cc9919e5defe2))
+* **users-rpc:** answer users.permissions.get over rabbitmq ([b8eb519](https://github.com/cabrera-evil/compralatino-users-api/commit/b8eb5190259eb5d4872b756e302c13ada307276b))
+
+### Bug Fixes
+
+* **deps:** align nestjs packages to the same version ([735bcd9](https://github.com/cabrera-evil/compralatino-users-api/commit/735bcd99530e08024ad575d1c570d9c43f97d8b0))
+* **deps:** upgrade handlebars to 4.7.10 ([f038f9a](https://github.com/cabrera-evil/compralatino-users-api/commit/f038f9a8d0cbf575491fadb299c4b9ce54dcfd4e))
+* **docker:** migrate and seed on container start ([7a267dd](https://github.com/cabrera-evil/compralatino-users-api/commit/7a267ddec958be767856595bc2295a308e0e12e8))
+* **docker:** redeclare the pnpm version arg in the base stage ([93ff439](https://github.com/cabrera-evil/compralatino-users-api/commit/93ff439e1d43944900f3930d36fa9d9f76c70e02))
+* **health:** make disk threshold a percentage configurable via HEALTH_DISK_THRESHOLD_PERCENT ([047be83](https://github.com/cabrera-evil/compralatino-users-api/commit/047be8323c86af8e2e6947d7a9fed5a53427b5ac))
+* **prisma:** honor the schema from DATABASE_URL in the pg adapter ([ba3c8d1](https://github.com/cabrera-evil/compralatino-users-api/commit/ba3c8d1fa9b5a341444b342ea6c1a8ccb3e865b1))
+* **ws:** avoid logger name clash with the io adapter ([98cc1f0](https://github.com/cabrera-evil/compralatino-users-api/commit/98cc1f03ccda73d33b20068bea088222d11979af))
+
 ## [1.4.0](https://github.com/cabrera-evil/nestjs-template/compare/v1.3.1...v1.4.0) (2025-09-18)
 
 ### Features
