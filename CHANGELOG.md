@@ -1,3 +1,9 @@
+## [1.0.0-beta.2](https://github.com/cabrera-evil/compralatino-users-api/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-10-11)
+
+### Bug Fixes
+
+* **role:** guard system roles against rename, creation and promotion ([8fee8ed](https://github.com/cabrera-evil/compralatino-users-api/commit/8fee8ed9eb58b6b404835f47693bd0a8be877e75))
+
 ## 1.0.0-beta.1 (2026-10-10)
 
 ### Features
