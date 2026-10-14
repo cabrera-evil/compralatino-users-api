@@ -84,6 +84,19 @@ const permissionData: Array<{
 		resource: 'monitoring',
 		action: 'read',
 	},
+	// Orders
+	{
+		code: 'orders:read',
+		description: 'View orders in the admin panel',
+		resource: 'orders',
+		action: 'read',
+	},
+	{
+		code: 'orders:write',
+		description: 'Update order status in the admin panel',
+		resource: 'orders',
+		action: 'write',
+	},
 	// Files
 	{
 		code: 'files:create',

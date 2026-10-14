@@ -43,6 +43,9 @@ RUN --mount=type=cache,target=/pnpm-store \
   --mount=type=cache,target=/root/.cache/pnpm \
   pnpm install --frozen-lockfile --ignore-scripts
 
+# Fetch the Prisma schema engine (its postinstall is skipped above) so `prisma migrate deploy` works offline at runtime
+RUN node "$(find node_modules/.pnpm -path '*@prisma/engines/scripts/postinstall.js' | head -n 1)"
+
 # ==============================================================================
 # Build stage - Build the application
 # ==============================================================================
@@ -122,11 +125,11 @@ ENV NODE_ENV=production \
   PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
   PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Copy production dependencies
-COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules/
+# Copy dependencies; the prisma CLI, ts-node and dotenv (dev deps) are needed to migrate and seed on start
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules/
 
-# Copy package files
-COPY --from=prod-deps --chown=node:node /app/package.json /app/pnpm-lock.yaml ./
+# Copy package files and the config the prisma CLI / seed runner read
+COPY --from=builder --chown=node:node /app/package.json /app/pnpm-lock.yaml /app/tsconfig.json /app/prisma.config.ts ./
 
 # Copy built application
 COPY --from=builder --chown=node:node /app/dist ./
@@ -144,8 +147,11 @@ EXPOSE ${PORT} ${TCP_PORT}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:${PORT}/api/health 2>/dev/null || exit 1
 
+# Entrypoint runs `prisma migrate deploy` + `prisma db seed`, then execs CMD
+COPY --from=builder --chown=node:node --chmod=755 /app/docker-entrypoint.sh ./
+
 # Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]
 
 # Start the application
 CMD ["node", "src/main"]

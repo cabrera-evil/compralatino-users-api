@@ -39,7 +39,7 @@ export const seedUsers = async (prisma: PrismaClient) => {
 
 		const user = await prisma.user.upsert({
 			where: { username: item.username },
-			update: data,
+			update: {},
 			create: data,
 		});
 

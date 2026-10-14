@@ -37,6 +37,8 @@ export class RoleService {
 	}
 
 	async create(dto: CreateRoleDto) {
+		if (dto.isSystem)
+			throw new BadRequestException('System roles cannot be created');
 		const data = await this.prisma.role.create({ data: dto });
 		return singleResponse(data);
 	}
@@ -44,6 +46,16 @@ export class RoleService {
 	async update(id: number, dto: UpdateRoleDto) {
 		const role = await this.prisma.role.findUnique({ where: { id } });
 		if (!role) throw new NotFoundException('Role not found');
+		if (dto.isSystem === true && !role.isSystem)
+			throw new BadRequestException('Roles cannot be promoted to system roles');
+		if (
+			role.isSystem &&
+			((dto.name !== undefined && dto.name !== role.name) ||
+				(dto.isSystem !== undefined && dto.isSystem !== role.isSystem))
+		)
+			throw new BadRequestException(
+				'System roles cannot be renamed or have isSystem changed'
+			);
 		const data = await this.prisma.role.update({ where: { id }, data: dto });
 		return singleResponse(data);
 	}
